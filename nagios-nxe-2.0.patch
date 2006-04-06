@@ -1,0 +1,313 @@
+diff -ur ./nxe.pl p/nxe.pl
+--- ./nxe.pl	2006-04-07 01:47:03.183530479 +0300
++++ p/nxe.pl	2006-04-07 01:46:59.253442739 +0300
+@@ -1,10 +1,36 @@
+ #!/usr/bin/perl -w
+ #
+ ###################################################
+-#$Version: 1.0$
++#$Version: 1.1$
+ #$Author$
++#$Upated by Alan McClure - HTMLCorp 2-21-2005$
+ #
+-# NXE - Nagios XML Engine for Nagios 1.x
++# NXE 1.1 - Nagios XML Engine for Nagios 2.x (developed on  2.0b2 (newest now))
++#
++#  ** NEW FEATURE! Now see your check results in local time!
++#  
++#  This updated version is being submited to accommodate for the new Nagios 2.x
++#  status.dat file which replaced status.log from Nagios 1.x genra.
++#
++#  For compatibility, I didn't add all of the new fields included in the new log
++#  format. So everyone who wrote thier own XSLT code around NXE will be pleased
++#  to know thier code "should" still work with the new Nagios 2.x log format.
++#  It did for us!
++#
++#  Experienced perl programmers: Please note, it has been exactly
++#  1 week to the day since I got mad enough to say "dammit, I'll fix it!"
++#  (edited for content) and learned perl. My previous
++#  programming experience was a 2 week "C" class 3 years ago, so don't say
++#  "I could have done this in 6 lines." Why the hell didn't you?
++#
++#  To update your version of NXE, simply overwrite the old "nxe.pl" file with this one.
++#
++#  Thanks again to the author, Daniel Koffler.
++#
++#  For license and copyright information, see below.
++#### Previous Version 1.0 Documentation ###########
++#
++#NXE - Nagios XML Engine for Nagios 1.x
+ #
+ # This application provides several methods of reporting data from Nagios in XML format
+ # as well as transforming that XML via XSLT. An XML based command interpreter is also included.
+@@ -38,6 +64,12 @@
+ # Revision History:
+ # Revision 1.0 June 2003 Daniel Koffler
+ ####################################################
++# Revision History:
++# Revision 1.1 February 2005 Alan McClure - HTMLCorp
++#  * Supports new Nagios 2.x (tested through 2.0b2)
++#  * NEW FEATURE - See your check results in local time
++#  * Did NOT add the new status fields found in the new version of the log format
++####################################################
+ #      ADDITIONAL INSTRUCTIONS:
+ #
+ # Modify the $CONFIG_FILE variable below to reflect the path to the nxe.config file.
+@@ -128,6 +160,10 @@
+     my %services;
+     my %hosts;
+     my @nagproc;
++    my $string;
++    my @data;
++    my $delta;
++
+ 
+     $wr->startTag("NXE_RESULT",
+ 	    "NAME" => "Nagios XML Engine Report",
+@@ -135,24 +171,56 @@
+     foreach my $target (@targets){
+ 	
+ 	open(STATUS, $files{$target}) || bail "Can't open Nagios Status File $target. Check config file.";
+-	while (defined (my $line = <STATUS>)){
+-	    chomp($line);
+-	    if ($line =~ s/^# //){
+-		$nagver = $line;
+-		next;
+-	    }
+-	    my @ent = split(/;/,$line);
+-	    my @type = ($ent[0] =~ /^(\[)(\d+)(\]\s)(\w+)/) or bail "Invalid format in the following entry:\n $line";
+-	    shift(@ent);    
+-	    if ($type[3] eq "PROGRAM"){
+-		@nagproc = ($type[1],@ent);
+-	    }elsif ($type[3] eq "HOST"){
+-		@hosts{$ent[0]} = [$type[1], @ent];
+-	    }elsif ($type[3] eq "SERVICE"){
+-		@services{"$ent[0] - $ent[1]"} = [$type[1], @ent];
+-	    }else {bail "Unkown Entry Type"}    
++
++	while ($_ = <STATUS>) {
++        chomp;
++        #s/#.*$//;           # ignore comments by erasing them
++        if ($_ =~s/^\sversion=//) {
++                $nagver = "HTML Nagios $_";
++                chomp $nagver;
++        }
++        if ($_ =~ s/^\screated//) {
++                s/=//;
++                $delta = $_;
++                chomp $delta;
++        }
++        if ($_ =~ /^(\w+)/) {     # Search for words at the beginning of the line
++                s/\s.*$//;  # delete trailing white space + everything else
++                $string.=$_;  # Push into string $string
++        }
++        if ($_ =~ /\}/) {         # find the "}"
++                s/\s//;     # delete white space
++                $string.=$_;
++        }
++        if ($_ =~ s/.*=/\|/) {  # Search for the = and delete everything before it
++
++                $string.=$_;
++                @data = split ('\}', $string); # dump string into array
+ 	}
+-	
++     }
++        foreach (@data){
++                chomp;
++                s/\n//g;
++                s/\s+$//;
++                s/\s+/ /g;
++                $_ .= "\n";
++                $_ = "[$delta] $_";
++        }
++        shift (@data);
++        foreach my $data (@data) {
++            my @ent = split (/\|/,$data);
++            chomp (@ent);
++            my @type = split (' ',$ent[0]);
++            shift(@ent);
++            if ($type[1] eq "program"){
++                @nagproc = ($type[0],@ent);
++            }elsif ($type[1] eq "host"){
++                @hosts{$ent[0]} = [$type[0], @ent];
++            }elsif ($type[1] eq "service"){
++                @services{"$ent[0] - $ent[1]"} = [$type[0], @ent];
++            }else {die "Unkown Entry Type"}
++	}
++
+ 	close(STATUS) || bail "Filehandle to $target was interupted";
+ 	
+ 	$wr->startTag("NAG_PROC",
+@@ -160,82 +228,111 @@
+ 	    "LAST_UPDATE" => $nagproc[0],
+ 	    "VERSION" => $nagver,
+ 	    "HOST_NAME" => hostname,
+-	    "P_START_TIME" => $nagproc[1],
+-	    "P_PID" => $nagproc[2],
+-	    "DAEMON" => $nagproc[3],
+-	    "P_LAST_CHECK" => $nagproc[4],
+-	    "LOG_ROTATION" => $nagproc[5],
+-	    "NOTIFIC" => $nagproc[6],
+-	    "EXEC_SVC_CHK" => $nagproc[7],
+-	    "ACEP_PASV_CHK" => $nagproc[8],
+-	    "EVENT_HNDLR" => $nagproc[9],
+-	    "OBSS_SVC" => $nagproc[10],
+-	    "FLAP_DETECT" => $nagproc[11],
+-	    "FAIL_PREDICT" => $nagproc[12],
+-	    "PERF_DATA" => $nagproc[13]);
++	    "P_START_TIME" => $nagproc[5],
++	    "P_PID" => $nagproc[3],
++	    "DAEMON" => $nagproc[4],
++	    "P_LAST_CHECK" => $nagproc[6],
++	    "LOG_ROTATION" => $nagproc[7],
++	    "NOTIFIC" => $nagproc[8],
++	    "EXEC_SVC_CHK" => $nagproc[9],
++	    "ACEP_PASV_CHK" => $nagproc[10],
++	    "EVENT_HNDLR" => $nagproc[13],
++	    "OBSS_SVC" => $nagproc[14],
++	    "FLAP_DETECT" => $nagproc[18],
++	    "FAIL_PREDICT" => $nagproc[19],
++	    "PERF_DATA" => $nagproc[20]);
+ 	
+ 	my @hostkeys = sort( keys(%hosts));	
+ 	foreach my $key (@hostkeys){
+ 	    my @host = @{$hosts{$key}};
++
++## Begin AJ edit ##############################
++
++	    if ($host[9] =~ "0") {
++		$host[9] = "UP";
++	    }elsif ($host[9] =~ "1") {
++		$host[9] = "DOWN";
++	    }elsif ($host[9] =~ "2") {
++		$host[9] = "UNKNOWN";
++	}
++            if ($host[14] =~ s/(\d+)/localtime($1)/e) {}
++
++################################################
++
+ 	    $wr -> emptyTag("HOST",
+ 		"LAST_UPDATE" => $host[0],
+ 		"HOSTNAME" => $host[1],
+-		"HST_STATUS" => $host[2], 
+-		"LAST_CHECK" => $host[3],
+-		"LAST_STATE_CHANGE" => $host[4],
+-		"HST_ACK" => $host[5],
+-		"TIME_UP" => $host[6],
+-		"TIME_DOWN" => $host[7],
+-		"TIME_UNREACH" => $host[8],
+-		"LAST_NOTIFIC" => $host[9],
+-		"CURR_NOTF_NUM" => $host[10],
+-		"NOTF_EN" => $host[11],
+-		"EVENT_HNDLR_EN" => $host[12],
+-		"CHECKS_EN" => $host[13],
+-		"FLAP_EN" => $host[14],
+-		"FAIL_PREDICT_EN" => $host[15],
+-		"PERF_DATA" => $host[16],
+-		"HST_FLAPING" => $host[17],
+-		"PERC_STATE_CHNG" => $host[18],
+-		"SCHD_DWTM_DEPTH" => $host[19],
+-		"HST_PLUG_OUTPUT" => $host[20]);
++		"HST_STATUS" => $host[9], 
++		"LAST_CHECK" => $host[14],
++		"LAST_STATE_CHANGE" => $host[19],
++		"HST_ACK" => $host[29],
++		"TIME_UP" => $host[21],
++		"TIME_DOWN" => $host[22],
++		"TIME_UNREACH" => $host[23],
++		"LAST_NOTIFIC" => $host[24],
++		"CURR_NOTF_NUM" => $host[27],
++		"NOTF_EN" => $host[28],
++		"EVENT_HNDLR_EN" => $host[33],
++		"CHECKS_EN" => $host[31],
++		"FLAP_EN" => $host[34],
++		"FAIL_PREDICT_EN" => $host[35],
++		"PERF_DATA" => $host[36],
++		"HST_FLAPING" => $host[39],
++		"PERC_STATE_CHNG" => $host[40],
++		"SCHD_DWTM_DEPTH" => $host[41],
++		"HST_PLUG_OUTPUT" => $host[12]);
+ 	}
+ 	my @srvkeys = sort( keys(%services));
+ 	foreach my $key (@srvkeys){
+ 	    my @service = @{$services{$key}};
++
++## Begin AJ edit ##############################
++            if ($service[10] =~ "0") {
++                $service[10] = "OK";
++            }elsif ($service[10] =~ "1") {
++                $service[10] = "WARNING";
++            }elsif ($service[10] =~ "2") {
++                $service[10] = "CRITICAL";
++            }elsif ($service[10] =~ "3") {
++		$service[10] = "UNKNOWN";
++	    }
++	    if ($service[23] =~ s/(\d+)/localtime($1)/e) {}
++
++###############################################
++
+ 	    $wr->emptyTag("SERVICE",
+ 		"LAST_UPDATE" => $service[0],
+ 		"HOSTNAME" => $service[1],
+ 		"SVC_DESC" => $service[2],
+-		"SVC_STATUS" => $service[3],
+-		"LAST_HSTATE" => $service[4],
+-		"RETRY" => $service[5],
+-		"STATE_TYPE" => $service[6],
+-		"LAST_CHECK" => $service[7],
+-		"NEXT_CHECK" => $service[8],
+-		"CHECK_TYPE" => $service[9],
+-		"LAST_STATE_CHANGE" => $service[10],
+-		"CHECKS_EN" => $service[11],
+-		"PASV_EN" => $service[12],
+-		"EVENT_HNDLR_EN" => $service[13],
+-		"SVC_ACK" => $service[14],
+-		"TIME_UP" => $service[15],
+-		"TIME_UNKWN" => $service[16],
+-		"TIME_WARN" => $service[17],
+-		"TIME_CRIT" => $service[18],
+-		"LAST_NOTIFIC" => $service[19],
+-		"CURR_NOTF_NUM" => $service[20],
+-		"NOTF_EN" => $service[21],
+-		"LATENCY" => $service[22],
+-		"EXEC_TIME" => $service[23],
+-		"FLAP_EN" => $service[24],
+-		"SVC_FLAPING" => $service[25],
+-		"FAIL_PREDICT_EN" => $service[26],
+-		"PERC_STATE_CHNG" => $service[27],
+-		"SCHD_DWTM_DEPTH" => $service[28],
+-		"PERF_DATA" => $service[29],
+-		"SVC_OBSS_EN"  => $service[30],
+-		"SVC_PLUG_OUTPUT" => $service[31]);
++		"SVC_STATUS" => $service[10],
++		"LAST_HSTATE" => $service[11],
++		"RETRY" => $service[12],
++		"STATE_TYPE" => $service[14],
++		"LAST_CHECK" => $service[23],
++		"NEXT_CHECK" => $service[24],
++		"CHECK_TYPE" => $service[25],
++		"LAST_STATE_CHANGE" => $service[15],
++		"CHECKS_EN" => $service[31],
++		"PASV_EN" => $service[32],
++		"EVENT_HNDLR_EN" => $service[33],
++		"SVC_ACK" => $service[34],
++		"TIME_UP" => $service[17],
++		"TIME_UNKWN" => $service[19],
++		"TIME_WARN" => $service[18],
++		"TIME_CRIT" => $service[20],
++		"LAST_NOTIFIC" => $service[27],
++		"CURR_NOTF_NUM" => $service[26],
++		"NOTF_EN" => $service[30],
++		"LATENCY" => $service[9],
++		"EXEC_TIME" => $service[8],
++		"FLAP_EN" => $service[36],
++		"SVC_FLAPING" => $service[41],
++		"FAIL_PREDICT_EN" => $service[37],
++		"PERC_STATE_CHNG" => $service[42],
++		"SCHD_DWTM_DEPTH" => $service[43],
++		"PERF_DATA" => $service[22],
++		"SVC_OBSS_EN"  => $service[39],
++		"SVC_PLUG_OUTPUT" => $service[21]);
+ 	}
+     }
+     $wr->endTag();
