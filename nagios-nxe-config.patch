@@ -1,0 +1,11 @@
+--- /home/glen/rpm/pld/BUILD/nagios-nxe-1.0/nxe.pl~	2006-04-07 01:50:25.418045146 +0300
++++ /home/glen/rpm/pld/BUILD/nagios-nxe-1.0/nxe.pl	2006-04-07 01:50:38.368334237 +0300
+@@ -77,7 +77,7 @@
+ ####################################################
+ 
+ 
+-my $CONFIG_FILE = "nxe.config";
++my $CONFIG_FILE = "/etc/nxe/nxe.config";
+ my @xslt_procs = ("libxslt", "sablotron", "xalan", "xslt", "xt", "saxon");
+ 
+ use strict;
