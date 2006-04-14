@@ -1,8 +1,10 @@
 #
 # Conditional build:
 %bcond_without	autodeps	# don't BR packages needed only for resolving deps
+#
 %include	/usr/lib/rpm/macros.perl
 Summary:	Nagios XML Engine
+Summary(pl):	Silnik XML dla Nagiosa
 Name:		nagios-nxe
 Version:	1.0
 Release:	0.1
@@ -22,7 +24,6 @@ BuildRequires:	perl-XML-Parser
 BuildRequires:	perl-XML-Writer-String
 BuildRequires:	perl-XML-XSLT-Wrapper
 %endif
-
 Requires(triggerpostun):	sed >= 4.0
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
@@ -33,6 +34,12 @@ The Nagios XML Engine (NXE for short) is an Open Source XML processing
 layer for the Nagios scheduling & monitoring platform. NXE provides an
 XML interface for the most critical aspects of managing and reporting
 on your Nagios infrastructure via XML.
+
+%description -l pl
+NXE (Nagios XML Engine) to warstwa przetwarzania XML dla platformy
+szereguj±cej i monitoruj±cej Nagios. NXE udostêpnia interfejs XML do
+najbardziej krytycznych aspektów zarz±dzania i raportowania z
+infrastruktury Nagiosa.
 
 %prep
 %setup -qc
