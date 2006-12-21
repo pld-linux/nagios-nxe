@@ -7,7 +7,7 @@ Summary:	Nagios XML Engine
 Summary(pl):	Silnik XML dla Nagiosa
 Name:		nagios-nxe
 Version:	1.0
-Release:	0.1
+Release:	0.2
 License:	GPL v2
 Group:		Applications
 Source0:	http://dl.sourceforge.net/nxe/NXEv1r0.tar.gz
@@ -25,6 +25,7 @@ BuildRequires:	perl-XML-Writer-String
 BuildRequires:	perl-XML-XSLT-Wrapper
 %endif
 Requires(triggerpostun):	sed >= 4.0
+BuildArch:	noarch
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %define		_sysconfdir	/etc/nxe
