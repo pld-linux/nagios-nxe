@@ -4,7 +4,7 @@
 #
 %include	/usr/lib/rpm/macros.perl
 Summary:	Nagios XML Engine
-Summary(pl):	Silnik XML dla Nagiosa
+Summary(pl.UTF-8):   Silnik XML dla Nagiosa
 Name:		nagios-nxe
 Version:	1.0
 Release:	0.2
@@ -36,10 +36,10 @@ layer for the Nagios scheduling & monitoring platform. NXE provides an
 XML interface for the most critical aspects of managing and reporting
 on your Nagios infrastructure via XML.
 
-%description -l pl
+%description -l pl.UTF-8
 NXE (Nagios XML Engine) to warstwa przetwarzania XML dla platformy
-szereguj±cej i monitoruj±cej Nagios. NXE udostêpnia interfejs XML do
-najbardziej krytycznych aspektów zarz±dzania i raportowania z
+szeregujÄ…cej i monitorujÄ…cej Nagios. NXE udostÄ™pnia interfejs XML do
+najbardziej krytycznych aspektÃ³w zarzÄ…dzania i raportowania z
 infrastruktury Nagiosa.
 
 %prep
