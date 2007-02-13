@@ -4,7 +4,7 @@
 #
 %include	/usr/lib/rpm/macros.perl
 Summary:	Nagios XML Engine
-Summary(pl.UTF-8):   Silnik XML dla Nagiosa
+Summary(pl.UTF-8):	Silnik XML dla Nagiosa
 Name:		nagios-nxe
 Version:	1.0
 Release:	0.2
