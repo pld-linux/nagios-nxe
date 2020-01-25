@@ -2,7 +2,6 @@
 # Conditional build:
 %bcond_without	autodeps	# don't BR packages needed only for resolving deps
 #
-%include	/usr/lib/rpm/macros.perl
 Summary:	Nagios XML Engine
 Summary(pl.UTF-8):	Silnik XML dla Nagiosa
 Name:		nagios-nxe
