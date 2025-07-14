@@ -45,8 +45,8 @@ infrastruktury Nagiosa.
 %setup -qc
 # undos the source
 find . -type f -print0 | xargs -0 sed -i -e 's,\r$,,'
-%patch0
-%patch1
+%patch -P0
+%patch -P1
 
 %install
 rm -rf $RPM_BUILD_ROOT
